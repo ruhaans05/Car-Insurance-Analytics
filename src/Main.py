@@ -1,12 +1,18 @@
-import pandas as pd
 import numpy as np
-from sklearn.preprocessing import StandardScaler
+import pandas as pd
 from sklearn.decomposition import PCA
+from sklearn.preprocessing import StandardScaler
 
 
-def load_data(path="data.csv"):
-    """Load dataset from CSV."""
-    return pd.read_csv(path)
+def load_data(path="Data/customer-data.csv"):
+    """
+    Load dataset from the Data directory.
+    """
+    try:
+        return pd.read_csv(path)
+    except FileNotFoundError:
+        print(f"Error: The file at {path} was not found.")
+        return pd.DataFrame()
 
 
 def prepare_features(df):
@@ -64,6 +70,9 @@ def get_important_features(df, n_components=2):
 
 
 if __name__ == "__main__":
+    """
+    Example usage of PCA functions
+    """
     data = load_data()
 
     explained = get_variance_explained(data)
