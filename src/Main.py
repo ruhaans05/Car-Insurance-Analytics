@@ -4,7 +4,6 @@ from redundant_columns import (encode_race, find_proxy_correlations,
                                mutual_information_scores)
 from transform_data import pca_feature_importance
 
-
 DATA_PATH = "Data/customer-data.csv"
 OUTPUT_PATH = "Data/cleaned_customer_data.csv"
 
