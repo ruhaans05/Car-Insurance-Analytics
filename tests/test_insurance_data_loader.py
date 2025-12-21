@@ -2,8 +2,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from Main import (get_important_features, get_variance_explained,
-                  prepare_features)
+from transform_data import pca_feature_importance
 
 
 @pytest.fixture
@@ -14,42 +13,56 @@ def sample_data():
         'age': [25, 45, 35, 50, 23],
         'income': [50000, 100000, 75000, 120000, 45000],
         'driving_experience': [2, 20, 10, 25, 1],
-        'race': [0, 1, 0, 1, 0], # Already encoded for PCA
+        'race_encoded': [0, 1, 0, 1, 0],  # Explicitly encoded
         'non_numeric_col': ['A', 'B', 'C', 'D', 'E']
     })
 
-def test_prepare_features_removes_strings(sample_data):
-    """Ensure non-numeric columns are dropped."""
-    processed_df = prepare_features(sample_data)
-    assert 'non_numeric_col' not in processed_df.columns
-    assert processed_df.shape[1] == 5 # id, age, income, driving_exp, race
-
-def test_variance_explained_sums_to_one(sample_data):
-    """PCA explained variance ratio should sum to approximately 1.0."""
-    explained = get_variance_explained(sample_data)
-    assert np.isclose(explained.sum(), 1.0)
-
-def test_get_important_features_output_shape(sample_data):
-    """Check if the function returns the correct number of components."""
-    n = 2
-    important, loadings = get_important_features(sample_data, n_components=n)
-    
-    assert len(important) == n
-    assert loadings.shape[0] == n
-    assert loadings.shape[1] == prepare_features(sample_data).shape[1]
-
-def test_pca_standardization_logic(sample_data):
+def test_pca_runs_on_scaled_data(sample_data):
     """
-    Ensure PCA doesn't crash even if features have widely different scales 
-    (Income vs Age).
+    PCA should run without errors despite different feature scales.
     """
-    try:
-        get_important_features(sample_data)
-    except ValueError as e:
-        pytest.fail(f"PCA failed on scaled data: {e}")
+    to_drop, importance = pca_feature_importance(sample_data)
+
+    assert isinstance(to_drop, list)
+    assert isinstance(importance, pd.Series)
+
+
+def test_non_numeric_columns_are_ignored(sample_data):
+    """
+    PCA should ignore non-numeric columns automatically.
+    """
+    _, importance = pca_feature_importance(sample_data)
+
+    assert 'non_numeric_col' not in importance.index
+
+
+def test_id_column_is_excluded(sample_data):
+    """
+    ID columns should never be included in PCA importance.
+    """
+    _, importance = pca_feature_importance(sample_data)
+
+    assert 'id' not in importance.index
+
 
 def test_empty_dataframe_handling():
-    """Ensure the code handles empty inputs gracefully."""
+    """
+    Empty DataFrame should return empty results without crashing.
+    """
     empty_df = pd.DataFrame()
-    with pytest.raises(ValueError): # PCA usually raises ValueError on empty sets
-        get_variance_explained(empty_df)
+
+    to_drop, importance = pca_feature_importance(empty_df)
+
+    assert to_drop == []
+    assert importance.empty
+
+
+def test_importance_scores_non_negative(sample_data):
+    """
+    PCA importance scores should never be negative.
+    """
+    _, importance = pca_feature_importance(sample_data)
+
+    assert (importance >= 0).all()
+
+
