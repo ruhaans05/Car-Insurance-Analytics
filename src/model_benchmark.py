@@ -1,9 +1,10 @@
-import pandas as pd
 import numpy as np
+import pandas as pd
 import xgboost as xgb
+from sklearn.metrics import accuracy_score, log_loss, roc_auc_score
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score, roc_auc_score, log_loss
 from sklearn.preprocessing import LabelEncoder
+
 
 def prepare_comparison_data(path="Data/customer-data.csv"):
     """

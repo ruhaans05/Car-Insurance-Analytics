@@ -3,6 +3,7 @@ import pandas as pd
 from sklearn.feature_selection import mutual_info_regression
 from sklearn.preprocessing import LabelEncoder
 
+
 def encode_race(df):
     """
     Safely encode race if categorical. 

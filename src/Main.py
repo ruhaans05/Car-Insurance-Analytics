@@ -1,5 +1,6 @@
-import pandas as pd
 import numpy as np
+import pandas as pd
+
 # Assuming your other files are named accordingly
 from redundant_columns import (find_proxy_correlations,
                                mutual_information_scores)
