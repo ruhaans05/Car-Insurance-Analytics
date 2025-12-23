@@ -1,9 +1,11 @@
-import joblib
-import pandas as pd
-import numpy as np
-import tensorflow as tf
 import os
+
+import joblib
+import numpy as np
+import pandas as pd
+import tensorflow as tf
 from thefuzz import process
+
 
 class InsurancePredictor:
     def __init__(self, model_path="Models/insurance_pricing_v1.h5", scaler_path="Models/scaler.bin"):

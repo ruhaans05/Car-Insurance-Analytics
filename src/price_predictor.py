@@ -1,10 +1,12 @@
-import pandas as pd
-import numpy as np
-import tensorflow as tf
-from tensorflow.keras import layers
-from sklearn.preprocessing import StandardScaler
-import joblib
 import os
+
+import joblib
+import numpy as np
+import pandas as pd
+import tensorflow as tf
+from sklearn.preprocessing import StandardScaler
+from tensorflow.keras import layers
+
 
 def build_stable_model(input_shape):
     """
@@ -27,12 +29,22 @@ def build_stable_model(input_shape):
 df = pd.read_csv("Data/cleaned_customer_data.csv")
 
 # 2. Prepare Features (X) and Target (y)
-# We drop price (target), outcome (redundant), and id
+# We drop price (target), outcome (redundant), and id from features
 cols_to_drop = ['price', 'outcome', 'id']
 X = df.drop(columns=[c for c in cols_to_drop if c in df.columns])
 
-# LOG TRANSFORMATION: Critical for insurance pricing
-y = np.log1p(df['price']) 
+# Determine target column robustly. Prefer `price` (continuous),
+# fall back to `outcome` (binary). Provide a clear error if neither.
+if 'price' in df.columns:
+    # LOG TRANSFORMATION: Critical for insurance pricing
+    y = np.log1p(df['price'])
+    print("Using 'price' column as target (log-transformed).")
+elif 'outcome' in df.columns:
+    # Binary target — do not log-transform
+    y = df['outcome']
+    print("'price' column not found; using 'outcome' column as target (no log).")
+else:
+    raise KeyError("No suitable target column found. Expected 'price' or 'outcome' in Data/cleaned_customer_data.csv")
 
 # 3. Scaling and Saving
 scaler = StandardScaler()
