@@ -2,72 +2,49 @@ import pandas as pd
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras import layers
-from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
+import joblib
 import os
 
-def build_pricing_model(input_shape):
+def build_stable_model(input_shape):
     """
-    Creates a Deep Neural Network for regression.
+    DNN with BatchNormalization to handle outliers like raw credit scores.
     """
     model = tf.keras.Sequential([
-        # Input Layer
         layers.Input(shape=(input_shape,)),
-        
-        # Hidden Layers with Dropout to prevent overfitting on sensitive data
-        layers.Dense(64, activation='relu'),
+        layers.Dense(128, activation='relu'),
+        layers.BatchNormalization(), 
         layers.Dropout(0.2),
+        layers.Dense(64, activation='relu'),
         layers.Dense(32, activation='relu'),
-        layers.Dense(16, activation='relu'),
-        
-        # Output Layer: Single value for the price
-        # Using 'softplus' ensures the price is always positive
-        layers.Dense(1, activation='softplus') 
+        # Using linear activation because we are predicting log(price)
+        layers.Dense(1, activation='linear') 
     ])
-
-    model.compile(
-        optimizer=tf.keras.optimizers.Adam(learning_rate=0.001),
-        loss='mse', # Mean Squared Error
-        metrics=['mae'] # Mean Absolute Error
-    )
+    model.compile(optimizer=tf.keras.optimizers.Adam(0.001), loss='mse')
     return model
 
-if __name__ == "__main__":
-    # 1. Load your cleaned data
-    # Ensure you are using the 'cleaned' version from your Main.py pipeline
-    if not os.path.exists("Data/cleaned_customer_data.csv"):
-        print("Run Main.py first to generate the cleaned dataset.")
-    else:
-        df = pd.read_csv("Data/cleaned_customer_data.csv")
+# 1. Load Data
+df = pd.read_csv("Data/cleaned_customer_data.csv")
 
-        # 2. Define Features and Target
-        # If 'price' isn't in your data yet, you can use 'outcome' as a proxy 
-        # or create a synthetic 'premium' column for testing.
-        X = df.drop(columns=['outcome']) # All metrics
-        y = df['outcome'] # Or your price column
+# 2. Prepare Features (X) and Target (y)
+# We drop price (target), outcome (redundant), and id
+cols_to_drop = ['price', 'outcome', 'id']
+X = df.drop(columns=[c for c in cols_to_drop if c in df.columns])
 
-        # 3. Scale the data (Crucial for Neural Networks)
-        scaler = StandardScaler()
-        X_scaled = scaler.fit_transform(X)
+# LOG TRANSFORMATION: Critical for insurance pricing
+y = np.log1p(df['price']) 
 
-        X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=0.2, random_state=42)
+# 3. Scaling and Saving
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+os.makedirs("Models", exist_ok=True)
+joblib.dump(scaler, "Models/scaler.bin")
 
-        # 4. Initialize and Train
-        model = build_pricing_model(X_train.shape[1])
-        
-        print("\n--- Training TensorFlow Pricing Model ---")
-        history = model.fit(
-            X_train, y_train,
-            epochs=50,
-            batch_size=32,
-            validation_split=0.2,
-            verbose=1
-        )
+# 4. Train
+model = build_stable_model(X_scaled.shape[1])
+print(f"Training on {X_scaled.shape[1]} features...")
+model.fit(X_scaled, y, epochs=100, batch_size=32, verbose=1)
 
-        # 5. Evaluate
-        results = model.evaluate(X_test, y_test)
-        print(f"\nModel Performance: MAE = {results[1]:.4f}")
-
-        # 6. Save Model
-        model.save("Models/insurance_pricing_v1.h5")
-        print("Model saved to Models/insurance_pricing_v1.h5")
+# 5. Save Model
+model.save("Models/insurance_pricing_v1.h5")
+print("Model and Scaler saved. Now run get_predicted_price.py")
