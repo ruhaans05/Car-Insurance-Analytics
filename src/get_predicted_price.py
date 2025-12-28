@@ -89,8 +89,7 @@ if __name__ == "__main__":
         price = predictor.predict(customer_dict)
         
         print("\n" + "-"*45)
-        # We apply a $500 floor because base insurance costs have a minimum threshold
-        print(f"ESTIMATED ANNUAL PREMIUM: ${max(price, 500.00):,.2f}")
+        print(f"ESTIMATED ANNUAL PREMIUM: ${price:,.2f}")
         print("-" * 45 + "\n")
     except Exception as e:
         print(f"\n[System Error]: {e}")

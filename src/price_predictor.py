@@ -33,18 +33,33 @@ df = pd.read_csv("Data/cleaned_customer_data.csv")
 cols_to_drop = ['price', 'outcome', 'id']
 X = df.drop(columns=[c for c in cols_to_drop if c in df.columns])
 
-# Determine target column robustly. Prefer `price` (continuous),
-# fall back to `outcome` (binary). Provide a clear error if neither.
-if 'price' in df.columns:
-    # LOG TRANSFORMATION: Critical for insurance pricing
-    y = np.log1p(df['price'])
-    print("Using 'price' column as target (log-transformed).")
-elif 'outcome' in df.columns:
-    # Binary target — do not log-transform
-    y = df['outcome']
-    print("'price' column not found; using 'outcome' column as target (no log).")
-else:
-    raise KeyError("No suitable target column found. Expected 'price' or 'outcome' in Data/cleaned_customer_data.csv")
+# Generate synthetic insurance prices based on risk factors
+# Base price: $500
+# Adjustments based on various risk factors
+base_price = 500
+
+# Risk multipliers
+age_mult = 1 + (3 - df['age']) * 0.15  # Younger = higher risk
+income_mult = 1 + (2 - df['income']) * 0.20  # Lower income = higher premium
+credit_mult = 1 + (1 - df['credit_score']) * 0.30  # Lower credit = higher premium
+driving_exp_mult = 1 + (3 - df['driving_experience']) * 0.20  # Less experience = higher
+violations_mult = 1 + df['speeding_violations'] * 0.15  # Each violation adds 15%
+duis_mult = 1 + df['DUIs'] * 0.40  # Each DUI adds 40%
+accidents_mult = 1 + df['past_accidents'] * 0.25  # Each accident adds 25%
+
+# Combine all factors
+price = (base_price * age_mult * income_mult * credit_mult * 
+         driving_exp_mult * violations_mult * duis_mult * accidents_mult)
+
+# Add some randomness for realism
+np.random.seed(42)
+price = price * (1 + np.random.normal(0, 0.1, len(price)))  # ±10% noise
+price = np.clip(price, 300, 5000)  # Cap between $300-$5000
+
+# LOG TRANSFORMATION: Critical for insurance pricing
+y = np.log1p(price)
+print(f"Generated synthetic prices. Range: ${price.min():.2f} - ${price.max():.2f}")
+print("Using synthetic price as target (log-transformed).")
 
 # 3. Scaling and Saving
 scaler = StandardScaler()
