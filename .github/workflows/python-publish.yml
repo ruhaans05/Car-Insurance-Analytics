@@ -9,8 +9,11 @@
 name: Upload Python Package
 
 on:
-  release:
-    types: [published]
+  push:
+    branches:
+      - main
+      - add-ML-model
+
 
 permissions:
   contents: read
